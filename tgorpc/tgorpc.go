@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
-	"net/url"
 	"sync"
 
 	"github.com/tardisgo/tardisgo/haxe/hx"
@@ -17,7 +16,7 @@ func init() {
 package tardis;
 
 #if (cpp&&static_link)
-	   @:cppFileCode('extern "C" char *TgoCall(char *args);')
+	   @:cppFileCode('extern "C" char *TgoCall(char *args);extern "C" int TgoFree(char *cgostrptr);')
 #end
 
 class TgoConnect {
@@ -42,11 +41,14 @@ class TgoConnect {
 	   		var cstr = cpp.NativeString.c_str(eargs);
 	   		var rcstr:cpp.ConstPointer<cpp.Char> = untyped __cpp__("TgoCall(cstr)");
 	   		var rstr = cpp.NativeString.fromPointer(rcstr);
+	   		untyped __cpp__("TgoFree(rcstr)"); // free the CGO allocated string
 	   		var res = haxe.Unserializer.run(rstr);
 	   		//trace("DEBUG LocCon res", res);
 	   		result(res);
 	   	#else
+	   		//trace("DEBUG RemCon args", args);
 	   		cnx._TgoRPC_.call(args,result);
+	   		//trace("DEBUG RemCon res", result);
 	   	#end
 	   }
 }
@@ -117,6 +119,7 @@ func (c Conn) Go(serviceMethod string, args, reply interface{}, done chan *Call)
 
 	hx.Meth("", c.conn, "TgoConnect", "call", 2, haxeArgs, func(r uintptr) {
 		c.mutex.Unlock() // another call can begin before processing what's below
+		//hx.Call("", "trace", 1, r)
 		rA, ok := dynamicToInterface(r).([]interface{})
 		if !ok {
 			call.Error = errors.New("returned value not an []interface{} in tgocall")
@@ -129,11 +132,14 @@ func (c Conn) Go(serviceMethod string, args, reply interface{}, done chan *Call)
 					call.Error = errors.New(errMsg)
 				} else {
 					back64, ok := rA[0].(string)
+					//println("back64: " + back64)
 					if !ok {
 						call.Error = errors.New("returned encoded data not a string in tgocall")
 					} else {
 						backBuf, err64 := base64.StdEncoding.DecodeString(back64)
 						if err64 != nil {
+							//println("DEBUG TgoConnect returned base64 string " +
+							//	back64 + " has error " + err64.Error())
 							call.Error = err64
 						} else {
 							networkBack := bytes.NewBuffer(backBuf)
@@ -208,12 +214,7 @@ func dynamicToInterface(dyn uintptr) interface{} {
 	case hx.CodeBool("", "Std.is(_a.param(0).val,Float);", dyn):
 		return hx.CodeFloat("", "_a.param(0).val;", dyn)
 	case hx.CodeBool("", "Std.is(_a.param(0).val,String);", dyn):
-		raw := hx.CodeString("", "_a.param(0).val;", dyn)
-		clean, err := url.QueryUnescape(raw)
-		if err == nil {
-			return clean
-		}
-		return raw
+		return hx.CodeString("", "_a.param(0).val;", dyn)
 	case hx.CodeBool("", "Std.is(_a.param(0).val,haxe.io.Bytes);", dyn):
 		return hx.CodeIface("", "[]byte",
 			"Slice.fromBytes(_a.param(0).val);", dyn)

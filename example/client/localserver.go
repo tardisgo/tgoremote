@@ -13,5 +13,6 @@ import "github.com/tardisgo/tgoremote/example"
 
 func main() {
 	example.Register()
+	go example.RRPC()
 	C.hxmain()
 }

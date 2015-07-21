@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/tardisgo/haxeremote"
+	"github.com/tardisgo/tgoremote"
 )
-import "github.com/tardisgo/tgoremote"
 
-func Setup() {
+func Setup(haxeEndpoint string) {
 	haxeremote.AddFunc("_TgoRPC_", tgoremote.CallFunc)
-	http.HandleFunc("/_haxeRPC_", haxeremote.HttpHandler)
+	http.HandleFunc(haxeEndpoint, haxeremote.HttpHandler)
 }

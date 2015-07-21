@@ -1,7 +1,13 @@
 package example
 
-import "bytes"
+import (
+	"bytes"
+	"fmt"
+)
+
 import "github.com/tardisgo/tgoremote"
+
+import "github.com/tardisgo/tgoremote/rrpcclient"
 
 type Tfoo struct {
 	A, B int
@@ -46,4 +52,14 @@ func Register() {
 	tgoremote.Register(tfb)
 	tgoremote.Register(tbb)
 	tgoremote.Register(tddb)
+}
+
+func RRPC() {
+	var res float64
+	rrpc := rrpcclient.Dial("_RRPC_")
+	err := rrpc.Call("Float.Square", float64(4), &res)
+	fmt.Println("YAY! Float.Square=", res, err)
+	var ires int64
+	err = rrpc.Call("Float.Square", int64(4), &ires)
+	fmt.Println("NAY! Float.Square=", ires, err)
 }
