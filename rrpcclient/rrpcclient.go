@@ -70,7 +70,7 @@ type Call struct {
 	Valid         bool        // Is this a valid call.
 	ID            uint32      // ID of this call.
 	ServiceMethod string      // The name of the service and method to call.
-	Args          []byte      // Encoded arguments to the function (*struct).
+	Args          []byte      // Encoded arguments to the function (struct).
 	Reply         []byte      // Encoded reply from the function (*struct).
 	replyIface    interface{} // Where to put the result using gob.
 	ErrorMsg      string      // After completion, the error status.
